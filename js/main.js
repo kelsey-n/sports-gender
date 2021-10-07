@@ -3,6 +3,8 @@ const width = 600; // Total width of the SVG parent
 const height = 600; // Total height of the SVG parent
 const padding = 1; // Vertical space between the bars of the histogram
 const barsColor = 'steelblue';
+const colorWomen = '#A6BF4B';
+const colorMen = '#F2C53D'
 
 const histogramChart = d3.select('#viz')
   .append('svg')
@@ -82,7 +84,6 @@ const createHistogram = (earnings) => {
   // Each point added below consist in an array of the coordinates [x, y] of the added point
   bins.unshift([0, 0]); // x = 0, y = 0 (numbers based on the histogram axes)
   bins.push([0, 17000000]); // x = 0, y = 17,000,000 (numbers based on the histogram axes)
-  console.log('bins expanded', bins);
 
   // const curveGenerator = d3.line()
   //   .x(d => xScale(d.length) + margin.left) // The x value of the accessor function corresponds to the length of each bar
@@ -170,8 +171,6 @@ const createViolin = (data) => {
   women_binfunc = d3.bin().thresholds(12)
   const men = men_binfunc(earnings_men);
   const women = women_binfunc(earnings_women);
-  console.log(men)
-  console.log(women)
 
   const halfWidth = (width - margin.right - margin.left) / 2
 
@@ -191,7 +190,7 @@ const createViolin = (data) => {
       .attr('y1', height - margin.bottom)
       .attr('x2', width - margin.right)
       .attr('y2', height - margin.bottom)
-        .style('stroke', 'black')
+      .style('stroke', 'black')
 
   // add y axis
   histogramChart
@@ -240,6 +239,7 @@ const createViolin = (data) => {
         .attr('fill', '#F2C53D')
         .attr('fill-opacity', 0.8)
         .attr('stroke', 'none')
+        .style('filter', 'url(#glow)') // add the glow effect that we define below
 
   const womenAreaGenerator = d3.area()
     .y((d, i) => {
@@ -267,6 +267,7 @@ const createViolin = (data) => {
         .attr('fill', '#A6BF4B')
         .attr('fill-opacity', 0.8)
         .attr('stroke', 'none')
+        .style('filter', 'url(#glow)') // add the glow effect that we define below
 
     // Add individual players to the visualization
 
@@ -300,8 +301,6 @@ const createViolin = (data) => {
       .stop() //stops the internal simulation timer and returns the simulation
       .tick(300); //A tick is an iteration of the simulation, and here we ask D3 to make 300 iterations. With every iteration, the simulation calculates the position of each circle. Then, in the following iteration, it starts from the previously calculated position and refines it.
 
-   console.log(data)
-
    // add a group for the circles
    const circles = histogramChart
      .append('g')
@@ -312,11 +311,84 @@ const createViolin = (data) => {
          .attr('cy', d => d.y)
          .attr('r', circlesRadius)
          .attr('fill-opacity', 0.6)
-         .attr('fill', d => {
-           return(d.gender === 'men' ? '#BF9B30' : '#718233')
-         })
-         .attr('stroke', d => {
-           return(d.gender === 'men' ? '#BF9B30' : '#718233')
-         })
+         .attr('fill', d => d.gender === 'men' ? '#BF9B30' : '#718233')
+         .attr('stroke', d => d.gender === 'men' ? '#BF9B30' : '#718233')
+
+  d3.selectAll('circle')
+   .on('mouseover', (e, d) => {
+      handleMouseOver(e, d);
+   })
+   .on('mouseout', d => handleMouseOut());
+
+  var tooltip = d3.select('div.tooltip')
+
+  function handleMouseOver(e, d) {
+    // populate the divs inside the tooltip with the relevant info
+    tooltip.select('.name').text(d.name)
+    tooltip.select('.home').text(d.country)
+    tooltip.select('.salary').text(d3.format('0.4s')(d.earnings_USD_2019))
+
+    // set the top and left position of the tooltip
+    tooltip
+      .style('top', `${e.pageY + 10}px`)
+      .style('left', `${e.pageX + 10}px`)
+
+    // Add the class visible to the tooltip, which will set its opacity property to 100% (as you can see in the main.css file)
+    tooltip.classed('visible', true)
+  };
+
+  function handleMouseOut() {
+    tooltip.classed('visible', false)
+  };
+
+  // Add legend
+  const legendWidth = 30;
+  const legendHeight = 15;
+  const legend = histogramChart
+    .append('g')
+      .attr('class', 'legend-group')
+      .attr('transform', `translate(${margin.left + 20}, ${margin.top + 10})`);
+  legend
+    .append('rect')
+      .attr('y', 0)
+      .attr('width', legendWidth)
+      .attr('height', legendHeight)
+      .attr('fill', colorWomen);
+  legend
+    .append('rect')
+      .attr('y', legendHeight + 5)
+      .attr('width', legendWidth)
+      .attr('height', legendHeight)
+      .attr('fill', colorMen);
+  legend
+    .append('text')
+      .attr('x', legendWidth + 7)
+      .attr('y', 12)
+      .style('font-size', '14px')
+      .text('Women');
+  legend
+    .append('text')
+      .attr('x', legendWidth + 7)
+      .attr('y', legendHeight + 18)
+      .style('font-size', '14px')
+      .text('Men');
+
+  // Append container for the effect: defs
+  const defs = histogramChart.append('defs');
+
+  // Add filter for the glow effect
+  const filter = defs
+     .append('filter')
+        .attr('id', 'glow');
+  filter
+     .append('feGaussianBlur')
+        .attr('stdDeviation', '3.5')
+        .attr('result', 'coloredBlur');
+  const feMerge = filter
+     .append('feMerge');
+  feMerge.append('feMergeNode')
+     .attr('in', 'coloredBlur');
+  feMerge.append('feMergeNode')
+     .attr('in', 'SourceGraphic');
 
 };
